@@ -30,10 +30,13 @@ library
     build-depends:
         base >= 4 && < 5
       , containers
+      , text
+      , attoparsec
 
     exposed-modules:
         Data.Named.Graph
       , Data.Named.IOB
+      , Text.Named.Enamex
 
     ghc-options: -Wall
 
