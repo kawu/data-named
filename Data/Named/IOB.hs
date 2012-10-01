@@ -1,4 +1,33 @@
--- | IOB encoding method extended to forests.
+{- |
+    IOB encoding method extended to forests.
+
+    Example:
+
+>>> :m Data.Tree Data.Text Text.Named.Enamex Data.Named.IOB
+>>> let enamex = pack "<x>w1.1\\ w1.2</x> w2 <y><z>w3</z> w4</y>"
+>>> let parseIt = fmap (mapTwo id id . fmap unpack) . parseForest
+
+>>> putStr . drawForest . fmap (fmap show) . parseIt $ enamex
+Left "x"
+|
+`- Right "w1.1 w1.2"
+,
+Right "w2"
+,
+Left "y"
+|
++- Left "z"
+|  |
+|  `- Right "w3"
+|
+`- Right "w4"
+
+>>> mapM_ print . encodeForest . parseIt $ enamex
+IOB {word = "w1.1 w1.2", label = [B "x"]}
+IOB {word = "w2", label = []}
+IOB {word = "w3", label = [B "y",B "z"]}
+IOB {word = "w4", label = [I "y"]}
+-}
 
 module Data.Named.IOB
 ( IOB (..)

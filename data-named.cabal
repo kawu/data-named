@@ -1,11 +1,11 @@
 name:               data-named
 version:            0.1.0
-synopsis:           Data Types for Named Entities
+synopsis:           Data types for named entities
 description:
     The library provides data types which can be used to represent
     forest structures with labels stored in internal nodes and
     words kept in leaves.  In particular, those types are well suited
-    for representing the layer of Named Entities (NEs).
+    for representing the layer of named entities (NEs).
     .
     The IOB method is implemented in the Data.Named.IOB module and can
     be used to translate between a forest of entities and a sequence
