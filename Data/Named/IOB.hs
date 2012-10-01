@@ -25,11 +25,11 @@ data Atom a  = B a      -- ^ Beginning marker
              deriving (Show, Eq, Ord)
 
 push :: Atom a -> IOB w a -> IOB w a
-push x (IOB word xs) = IOB word (x:xs)
+push x (IOB w xs) = IOB w (x:xs)
 
 popMaybe :: IOB w a -> Maybe (Atom a, IOB w a)
-popMaybe (IOB word (x:xs)) = Just (x, IOB word xs)
-popMaybe (IOB word [])     = Nothing
+popMaybe (IOB w (x:xs)) = Just (x, IOB w xs)
+popMaybe (IOB _ [])     = Nothing
 
 topMaybe :: IOB w a -> Maybe (Atom a)
 topMaybe iob = fst <$> popMaybe iob
@@ -37,16 +37,16 @@ topMaybe iob = fst <$> popMaybe iob
 pop :: IOB w a -> (Atom a, IOB w a)
 pop = fromJust . popMaybe
 
-top :: IOB w a -> Atom a
-top = fromJust . topMaybe
+-- top :: IOB w a -> Atom a
+-- top = fromJust . topMaybe
 
 raw :: Atom a -> a
 raw (B x) = x
 raw (I x) = x
 
-isB :: Atom a -> Bool
-isB (B _) = True
-isB _     = False
+-- isB :: Atom a -> Bool
+-- isB (B _) = True
+-- isB _     = False
 
 isI :: Atom a -> Bool
 isI (I _) = True
@@ -60,15 +60,16 @@ encodeForest (x:xs) = encodeTree x ++ encodeForest xs
 -- | Encode the tree using the IOB method.
 encodeTree :: Tree (Either a w) -> [IOB w a]
 
-encodeTree (Node (Left label) []) =
+encodeTree (Node (Left _) []) =
     error "encodeTree: label node with no children"
-encodeTree (Node (Left label) forest) =
-    let addLayer e (x:xs) = push (B e) x : map (push $ I e) xs
-    in  addLayer label $ encodeForest forest
+encodeTree (Node (Left e) forest) =
+    let addLayer (x:xs) = push (B e) x : map (push $ I e) xs
+        addLayer []     = []
+    in  addLayer (encodeForest forest)
 
-encodeTree (Node (Right word) (_:_)) =
+encodeTree (Node (Right _) (_:_)) =
     error "encodeTree: word node with children"
-encodeTree (Node (Right word) _) = [IOB word []]
+encodeTree (Node (Right w) _) = [IOB w []]
 
 -- | Decode the forest using the IOB method.
 decodeForest :: Eq a => [IOB w a] -> Forest (Either a w)
@@ -79,7 +80,7 @@ decodeForest xs =
     (chunk, xs') = followTop xs
     tree = case topMaybe $ head chunk of
         Nothing -> Node (Right . word $ head chunk) []
-        Just y  -> Node (Left $ raw y) (decodeForest $ map rmTop chunk)
+        Just e  -> Node (Left $ raw e) (decodeForest $ map rmTop chunk)
     rmTop = snd . pop
 
 -- | Take iob elements as long as the top label doesn't change.  
@@ -89,6 +90,6 @@ followTop [] = error "followTop: empty iob"
 followTop (x:xs) =
     (x:chunk, rest)
   where
-    (chunk, rest) = span (pred (topMaybe x) . topMaybe) xs
-    pred (Just a) (Just b) = raw a == raw b && isI b
-    pred _ _ = False
+    (chunk, rest) = span (cond (topMaybe x) . topMaybe) xs
+    cond (Just a) (Just b) = raw a == raw b && isI b
+    cond _ _ = False

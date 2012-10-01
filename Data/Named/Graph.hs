@@ -52,7 +52,7 @@ edges g k = case M.lookup k (edgeMap g) of
 roots :: Ord k => Graph k v -> [k]
 roots g =
     [ k
-    | (k, v) <- M.assocs (nodeMap g)
+    | (k, _) <- M.assocs (nodeMap g)
     , not (k `S.member` desc) ]
   where
     desc = S.fromList . concat . M.elems $ edgeMap g
@@ -86,7 +86,7 @@ toForestWith pr g = map valTr . snd $
 -- | Transform graph into a forest. It removes duplicate
 -- nodes from trees chosing trees in an arbitrary order.
 toForest :: (Show k, Ord k) => Graph k v -> T.Forest v
-toForest = toForestWith (const 0)
+toForest = toForestWith $ const (0 :: Int)
 
 trim :: Ord k => S.Set k -> T.Tree k -> (S.Set k, T.Tree k)
 trim visited tree =
