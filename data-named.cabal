@@ -1,6 +1,6 @@
 name:               data-named
 version:            0.1.0
-synopsis:           Forest of labeled entities
+synopsis:           Data Types for Named Entities
 description:
     The library provides data types which can be used to represent
     forest structures with labels stored in internal nodes and

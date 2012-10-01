@@ -1,3 +1,5 @@
+-- | IOB encoding method extended to forests.
+
 module Data.Named.IOB
 ( IOB (..)
 , Label
@@ -10,7 +12,8 @@ import Control.Applicative ((<$>))
 import Data.Maybe (fromJust)
 import Data.Tree
 
--- | An 'IOB' data structure: word with corresponding label.
+-- | An 'IOB' data structure consists of a word with a corresponding
+-- compound label.
 data IOB w a = IOB
     { word  :: w
     , label :: Label a

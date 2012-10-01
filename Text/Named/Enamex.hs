@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | Parsing text in the Enamex data format.
+
 module Text.Named.Enamex
 ( parseForest
 , parseEnamex
@@ -49,7 +51,7 @@ pCloseTag = "</" .*> pWord <*. ">"
 
 pWord :: Parser T.Text
 pWord =
-    scan False special
+    unEscape <$> scan False special
   where
     special False c =
       case c == ' ' || c == '<' || c == '>' of
@@ -58,6 +60,15 @@ pWord =
             then Just True
             else Just False
     special True _  = Just False
+
+-- | TODO: Use lazy text builder to avoid slowness in the pessimistic case.
+unEscape :: T.Text -> T.Text
+unEscape xs = x `T.append` case drop1 rest of
+    Just (y, ys) -> y `T.cons` unEscape ys
+    Nothing      -> ""
+  where
+    drop1 = T.uncons <=< return . snd <=< T.uncons
+    (x, rest) = T.breakOn "\\" xs 
 
 -- | Parse the enamex forest.
 parseForest :: T.Text -> Forest

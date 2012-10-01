@@ -1,5 +1,5 @@
 -- | Implementation of a graph with each node identified by a unique key.
--- It is a provisional module, it might be replace by the standard
+-- It is a provisional module and it might be replaced by the standard
 -- graph from containers package in the future.
 
 module Data.Named.Graph
@@ -77,7 +77,7 @@ toForestWith :: (Show k, Ord k, Ord a)
 toForestWith pr g = map valTr . snd $
     mapAccumL trim S.empty sortedTrees
   where
-    valTr = fmap (node g) -- ^ Make value tree from a key tree
+    valTr = fmap (node g) -- Make value tree from a key tree
     trees = map (toKeyTree g) (roots g)
     sortedTrees =
         let f = pr . valTr
