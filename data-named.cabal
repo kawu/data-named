@@ -35,6 +35,7 @@ library
 
     exposed-modules:
         Data.Named.Graph
+      , Data.Named.DAG
       , Data.Named.IOB
       , Text.Named.Enamex
 
