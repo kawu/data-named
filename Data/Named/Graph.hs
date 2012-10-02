@@ -51,49 +51,59 @@ edges g k = case M.lookup k (edgeMap g) of
 -- | Return all graph roots (i.e. nodes with no parents).
 roots :: Ord k => Graph k v -> [k]
 roots g =
-    [ k
-    | (k, _) <- M.assocs (nodeMap g)
-    , not (k `S.member` desc) ]
-  where
-    desc = S.fromList . concat . M.elems $ edgeMap g
+    let desc = S.fromList . concat . M.elems $ edgeMap g
+    in  [k | (k, _) <- M.assocs (nodeMap g), not (k `S.member` desc)]
 
--- | Make a tree rooted in the node with respect to the graph.
-toTree :: (Show k, Ord k) => Graph k v -> k -> T.Tree v
-toTree g = fmap (node g) . toKeyTree g
+generate :: (Show k, Ord k) => Graph k v -> k -> T.Tree k
+generate g k  = T.Node k (map (generate g) (edges g k))
 
--- | Make a key tree rooted in the node with respect to the graph.
-toKeyTree :: (Show k, Ord k) => Graph k v -> k -> T.Tree k
-toKeyTree g k = T.Node k
-    [ toKeyTree g k'
-    | k' <- edges g k ]
+-- prune :: Show k => (k -> k -> Ordering) -> T.Forest k -> T.Forest k
+-- prune cmp ts = runRan cmp (chop ts)
 
--- | Transform graph into a forest given the priority function.
--- That is, trees with higher priorities will be taken first,
--- while those with lower priorities might be trimmed down
--- (since we don't want to have nodes with multiple parents in
--- the resulting forest).
-toForestWith :: (Show k, Ord k, Ord a)
-             => (T.Tree v -> a) -> Graph k v -> T.Forest v
-toForestWith pr g = map valTr . snd $
-    mapAccumL trim S.empty sortedTrees
-  where
-    valTr = fmap (node g) -- Make value tree from a key tree
-    trees = map (toKeyTree g) (roots g)
-    sortedTrees =
-        let f = pr . valTr
-        in  sortBy (comparing f) trees
+data Ran k = Ran
+    { ranKey    :: k
+    , ranMax    :: k }
 
--- | Transform graph into a forest. It removes duplicate
--- nodes from trees chosing trees in an arbitrary order.
-toForest :: (Show k, Ord k) => Graph k v -> T.Forest v
-toForest = toForestWith $ const (0 :: Int)
+chop :: (k -> k -> Ordering) -> T.Forest (Ran k) -> RanM (T.Forest (Ran k))
+chop cmp = doIt where
+    doIt [] = return []
+    doIt (Node span ts : us) = do
+        outOfRange <- contains cmp (ranMax span)
+        if outOfRange then
+            doIt us
+        else do
+            include (ranMax span)
+            as <- doIt ts
+            bs <- doIt us
+            return (Node span as : bs)
 
-trim :: Ord k => S.Set k -> T.Tree k -> (S.Set k, T.Tree k)
-trim visited tree =
-    (visited', tree')
-  where
-    tree'    = fromJust (doIt tree)
-    visited' = foldl' (flip S.insert) visited (T.flatten tree')
-    doIt (T.Node x ts)
-        | x `S.member` visited = Nothing
-        | otherwise = Just $ T.Node x (mapMaybe doIt ts)
+newtype RanM k a = RanM { runRanM :: k -> (a, k) }
+
+instance Monad (RanM k) where
+    return x     = RanM $ \s -> (x, s)
+    RanM v >>= f = RanM $ \s -> case v s of (x, s') -> runRanM (f x) s'
+
+-- run          :: Bounds -> RanM s a -> a
+-- run _ act     = fst (runRanM act Set.empty)
+
+contains :: (k -> k -> Ordering) -> k -> RanM k Bool
+contains cmp k = RanM $ \m -> (cmp k m <= EQ, m)
+
+include :: k -> RanM k ()
+include k = RanM $ \_ -> ((), k)
+
+-- -- | Spanning-like forest of the graph.  Trees in the resulting
+-- -- forest are disjoint with respect to their ranges.
+-- disjoint
+--     :: (Show k, Ord k) => (k -> k -> Ordering)
+--     -> Graph k v -> [k] -> T.Forest k
+-- disjoint cmp g xs =
+-- 
+-- toForestBy
+--     :: (Show k, Ord k) => (k -> k -> Ordering)
+--     -> Graph k v -> T.Forest k
+-- toForestBy cmp g =
+--     disjoint g . sortBy cmpRoots $ roots g
+--   where
+--     proxy = minimumBy cmp . reachable g
+--     cmpRoots r r' = cmp (proxy r) (proxy r')
