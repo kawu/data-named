@@ -1,6 +1,7 @@
 {-# LANGUAGE DoAndIfThenElse #-}
 
--- | Implementation of a graph with each node identified by a unique key.
+-- | Implementation of a graph with each internal node identified by a
+-- unique key and each leaf represented by a position in the sentence.
 
 module Data.Named.Graph
 ( Graph (..)
@@ -75,6 +76,8 @@ addWords (p, q) ts
         let m = spanSet s S.\\ S.unions (map (spanSet . span) us)
         in  T.Node (k, s) (fillForest us ++ map mkLeaf (S.toList m))
 
+-- | Transform graph into a disjoint forest, i.e. with no mutually
+-- overlapping trees.
 toForest :: (Ord n, Ix w) => Graph n w -> T.Forest (Either n w)
 toForest g = addWords (bounds g) . prune . map (generate g . Left) . roots $ g
 

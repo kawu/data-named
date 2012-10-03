@@ -33,10 +33,12 @@ import Data.Ix (Ix, range)
 import qualified Data.Tree as T
 import qualified Data.Set as S
 
+-- | Map function over tree leaves.
 mapLeaves :: (a -> b) -> T.Tree (Either c a) -> T.Tree (Either c b)
 mapLeaves f (T.Node (Left x) ts) = T.Node (Left x) (map (mapLeaves f) ts)
 mapLeaves f (T.Node (Right x) _) = T.Node (Right $ f x) []
 
+-- | Map function over tree internal nodes.
 mapNodes :: (a -> b) -> T.Tree (Either a c) -> T.Tree (Either b c)
 mapNodes f (T.Node (Left x) ts) = T.Node (Left $ f x) (map (mapNodes f) ts)
 mapNodes _ (T.Node (Right x) _) = T.Node (Right x) []
