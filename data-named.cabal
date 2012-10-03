@@ -1,5 +1,5 @@
 name:               data-named
-version:            0.1.0
+version:            0.2.0
 synopsis:           Data types for named entities
 description:
     The library provides data types which can be used to represent
@@ -14,7 +14,7 @@ description:
     .
     The Data.Named.Graph module can be used to represent more general,
     graph structures of entities.  The module provides also a lossy
-    conversion from a DAG to a forest of entities.
+    conversion from a DAG to a disjoint forest of entities.
 license:            BSD3
 license-file:       LICENSE
 cabal-version:      >= 1.6
@@ -34,8 +34,8 @@ library
       , attoparsec
 
     exposed-modules:
-        Data.Named.Graph
-      , Data.Named.DAG
+        Data.Named.Tree
+      , Data.Named.Graph
       , Data.Named.IOB
       , Text.Named.Enamex
 

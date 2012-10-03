@@ -1,3 +1,5 @@
+{-# LANGUAGE DoAndIfThenElse #-}
+
 -- | Implementation of a graph with each node identified by a unique key.
 -- It is a provisional module and it might be replaced by the standard
 -- graph from containers package in the future.
@@ -8,18 +10,14 @@ module Data.Named.Graph
 , node
 , edges
 , roots
-, toTree
-, toKeyTree
-, toForestWith
-, toForest
+, disjointForest
 ) where
 
 import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.Tree as T
-import Data.List (mapAccumL, foldl', sortBy)
-import Data.Maybe (mapMaybe, fromJust)
-import Data.Ord (comparing)
+
+import Data.Named.Tree
 
 -- | A graph.
 data Graph k v = Graph
@@ -57,53 +55,39 @@ roots g =
 generate :: (Show k, Ord k) => Graph k v -> k -> T.Tree k
 generate g k  = T.Node k (map (generate g) (edges g k))
 
--- prune :: Show k => (k -> k -> Ordering) -> T.Forest k -> T.Forest k
--- prune cmp ts = runRan cmp (chop ts)
+-- | A stateful monad for forest pruning.
+newtype RanM a = RanM { runRanM :: Int -> (a, Int) }
 
-data Ran k = Ran
-    { ranKey    :: k
-    , ranMax    :: k }
-
-chop :: (k -> k -> Ordering) -> T.Forest (Ran k) -> RanM (T.Forest (Ran k))
-chop cmp = doIt where
-    doIt [] = return []
-    doIt (Node span ts : us) = do
-        outOfRange <- contains cmp (ranMax span)
-        if outOfRange then
-            doIt us
-        else do
-            include (ranMax span)
-            as <- doIt ts
-            bs <- doIt us
-            return (Node span as : bs)
-
-newtype RanM k a = RanM { runRanM :: k -> (a, k) }
-
-instance Monad (RanM k) where
+instance Monad RanM where
     return x     = RanM $ \s -> (x, s)
     RanM v >>= f = RanM $ \s -> case v s of (x, s') -> runRanM (f x) s'
 
--- run          :: Bounds -> RanM s a -> a
--- run _ act     = fst (runRanM act Set.empty)
+run :: RanM a -> a
+run act = fst (runRanM act (-1))
 
-contains :: (k -> k -> Ordering) -> k -> RanM k Bool
-contains cmp k = RanM $ \m -> (cmp k m <= EQ, m)
+contains :: Int -> RanM Bool
+contains k = RanM $ \m -> (k <= m, m)
 
-include :: k -> RanM k ()
+include :: Int -> RanM ()
 include k = RanM $ \_ -> ((), k)
 
--- -- | Spanning-like forest of the graph.  Trees in the resulting
--- -- forest are disjoint with respect to their ranges.
--- disjoint
---     :: (Show k, Ord k) => (k -> k -> Ordering)
---     -> Graph k v -> [k] -> T.Forest k
--- disjoint cmp g xs =
--- 
--- toForestBy
---     :: (Show k, Ord k) => (k -> k -> Ordering)
---     -> Graph k v -> T.Forest k
--- toForestBy cmp g =
---     disjoint g . sortBy cmpRoots $ roots g
---   where
---     proxy = minimumBy cmp . reachable g
---     cmpRoots r r' = cmp (proxy r) (proxy r')
+chop :: T.Forest (k, Span) -> RanM (T.Forest (k, Span))
+chop [] = return []
+chop (T.Node (k, s) ts : us) = do
+    visited <- contains (end s)
+    if visited then
+        chop us
+    else do
+        as <- chop ts
+        include (end s)
+        bs <- chop us
+        return (T.Node (k, s) as : bs)
+
+prune :: (k -> Int) -> T.Forest k -> T.Forest k
+prune f = unSpanForest . run . chop . sortForest . spanForest f
+
+-- | Spanning-like forest of a DAG.  Trees in the resulting forest are
+-- disjoint with respect to their ranges.  It is not checked if the input
+-- graph is actually a DAG.
+disjointForest :: (Show k, Ord k) => (k -> Int) -> Graph k v -> T.Forest k
+disjointForest f g = prune f . map (generate g) . roots $ g
