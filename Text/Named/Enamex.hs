@@ -4,8 +4,8 @@
     Parsing text in the Enamex data format.  Each node is enclosed between
     opening and closing tags with tag name representing the label and contents
     representing children of the node.  Both leaf and label values should be
-    escaped by prepending the '\' character before special ' ' (space), '>',
-    '<' and '\' characters.
+    escaped by prepending the \\ character before special >, <, \\ and space
+    characters.
 
     Example:
 

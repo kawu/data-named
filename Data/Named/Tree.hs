@@ -35,18 +35,21 @@ import qualified Data.Map as M
 mapTrees :: (a -> b) -> T.Forest a -> T.Forest b
 mapTrees f = map (fmap f)
 
--- | Spanning of a tree/forest.
+-- | Spanning of a tree.
 data Span = Span
     { beg   :: Int
     , end   :: Int }
     deriving (Show, Eq, Ord)
 
+-- | Make span for a leaf node.
 leafSpan :: Int -> Span
 leafSpan i = Span i i
 
+-- | Minimum span overlapping both input spans.
 (<>) :: Span -> Span -> Span
 Span p q <> Span p' q' = Span (min p p') (max q q')
 
+-- | Set of positions covered by the span.
 spanSet :: Span -> S.IntSet
 spanSet s = S.fromList [beg s .. end s]
 
@@ -67,9 +70,11 @@ spanTree f (T.Node k ts) =
 spanForest :: (k -> Int) -> T.Forest k -> T.Forest (k, Span)
 spanForest f ts = map (spanTree f) ts
 
+-- | Remove span annotations from the tree.
 unSpanTree :: T.Tree (k, Span) -> T.Tree k
 unSpanTree = fmap fst
 
+-- | Remove span annotations from the forest.
 unSpanForest :: T.Forest (k, Span) -> T.Forest k
 unSpanForest = map unSpanTree
 
