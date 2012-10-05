@@ -2,8 +2,12 @@
 
 module Data.Named.Tree
 ( 
+-- * Auxiliary types
+  NeTree
+, NeForest
+
 -- * Span
-  Span (..)
+, Span (..)
 , leafSpan
 , (<>)
 , spanSet
@@ -24,14 +28,22 @@ module Data.Named.Tree
 , onNode
 , onEither
 , onBoth
+
+, module Data.Tree
 ) where
 
 import Prelude hiding (span)
 import Data.List (sortBy)
 import Data.Ord (comparing)
 import Data.Ix (Ix, range)
-import qualified Data.Tree as T
+import Data.Tree
 import qualified Data.Set as S
+
+-- | A tree with a values in internal nodes and b values in leaves.
+type NeTree a b   = Tree (Either a b)
+
+-- | A forest with a values in internal nodes and b values in leaves.
+type NeForest a b = Forest (Either a b)
 
 -- | Map function over the leaf value.
 onLeaf :: (a -> b) -> Either c a -> Either c b
@@ -59,12 +71,12 @@ onBoth f (Right x) = Right (f x)
 {-# INLINE onBoth #-}
 
 -- | Map function over each tree from the forest.
-mapForest :: (a -> b) -> T.Forest a -> T.Forest b
+mapForest :: (a -> b) -> Forest a -> Forest b
 mapForest = map . mapTree
 {-# INLINE mapForest #-}
 
 -- | Map function over the tree.
-mapTree :: (a -> b) -> T.Tree a -> T.Tree b
+mapTree :: (a -> b) -> Tree a -> Tree b
 mapTree = fmap
 {-# INLINE mapTree #-}
 
@@ -88,34 +100,34 @@ spanSet :: Ix w => Span w -> S.Set w
 spanSet s = S.fromList $ range (beg s, end s)
 
 -- | Get span of the span-annotated tree.
-span :: T.Tree (a, Span w) -> Span w
-span = snd . T.rootLabel
+span :: Tree (a, Span w) -> Span w
+span = snd . rootLabel
 
 -- | Annotate tree nodes with spanning info given the function
 -- which assignes indices to leaf nodes.
-spanTree :: Ord w => T.Tree (Either n w) -> T.Tree (Either n w, Span w)
-spanTree (T.Node (Right k) []) = T.Node (Right k, leafSpan k) []
-spanTree (T.Node k ts) =
+spanTree :: Ord w => Tree (Either n w) -> Tree (Either n w, Span w)
+spanTree (Node (Right k) []) = Node (Right k, leafSpan k) []
+spanTree (Node k ts) =
     let us = spanForest ts
         s  = foldl1 (<>) (map span us)
-    in  T.Node (k, s) us
+    in  Node (k, s) us
 
 -- | Annotate forest nodes with spanning info.
-spanForest :: Ord w => T.Forest (Either n w) -> T.Forest (Either n w, Span w)
+spanForest :: Ord w => Forest (Either n w) -> Forest (Either n w, Span w)
 spanForest = map spanTree
 
 -- | Remove span annotations from the tree.
-unSpanTree :: T.Tree (k, Span w) -> T.Tree k
+unSpanTree :: Tree (k, Span w) -> Tree k
 unSpanTree = fmap fst
 
 -- | Remove span annotations from the forest.
-unSpanForest :: T.Forest (k, Span w) -> T.Forest k
+unSpanForest :: Forest (k, Span w) -> Forest k
 unSpanForest = map unSpanTree
 
 -- | Sort the tree with respect to spanning info.
-sortTree :: Ord w => T.Tree (k, Span w) -> T.Tree (k, Span w)
-sortTree (T.Node x ts) = T.Node x (sortForest ts)
+sortTree :: Ord w => Tree (k, Span w) -> Tree (k, Span w)
+sortTree (Node x ts) = Node x (sortForest ts)
 
 -- | Sort the forest with respect to spanning info.
-sortForest :: Ord w => T.Forest (k, Span w) -> T.Forest (k, Span w)
+sortForest :: Ord w => Forest (k, Span w) -> Forest (k, Span w)
 sortForest = sortBy (comparing span) . map sortTree

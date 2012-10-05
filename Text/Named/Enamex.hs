@@ -9,7 +9,7 @@
 
     Example:
 
->>> :m Text.Named.Enamex Data.Text.Lazy Data.Tree Data.Named.Tree
+>>> :m Text.Named.Enamex Data.Named.Tree Data.Text.Lazy
 >>> let drawIt = putStr . drawForest . mapForest show . parseForest
 >>> drawIt $ pack "<x>w1.1\\ w1.2</x> <y><z>w2</z> w3</y>"
 Left "x"
@@ -45,22 +45,19 @@ import Data.Function (on)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as L
 import qualified Data.Text.Lazy.Builder as L
-import qualified Data.Tree as Tr
+import qualified Data.Named.Tree as Tr
 
-type Tree a b   = Tr.Tree (Either a b)
-type Forest a b = Tr.Forest (Either a b)
-
-pForest :: Parser (Forest T.Text T.Text)
+pForest :: Parser (Tr.NeForest T.Text T.Text)
 pForest = pTree `sepBy` (space *> skipSpace)
 
-pTree :: Parser (Tree T.Text T.Text)
+pTree :: Parser (Tr.NeTree T.Text T.Text)
 pTree = pNode
     <|> pLeaf
 
-pLeaf :: Parser (Tree T.Text T.Text)
+pLeaf :: Parser (Tr.NeTree T.Text T.Text)
 pLeaf = Tr.Node <$> (Right <$> pWord) <*> pure []
 
-pNode :: Parser (Tree T.Text T.Text)
+pNode :: Parser (Tr.NeTree T.Text T.Text)
 pNode = do
     x    <- pOpenTag
     kids <- pForest
@@ -108,11 +105,11 @@ escape x = case T.uncons z of
     special c = c == ' ' || c == '<' || c == '>' || c == '\\'
 
 -- | Parse the enamex forest.
-parseForest :: L.Text -> Forest T.Text T.Text
+parseForest :: L.Text -> Tr.NeForest T.Text T.Text
 parseForest = either error id . eitherResult . parse (pForest <* endOfInput)
 
 -- | Parse the enamex file.
-parseEnamex :: L.Text -> [Forest T.Text T.Text]
+parseEnamex :: L.Text -> [Tr.NeForest T.Text T.Text]
 parseEnamex = map parseForest . L.lines
 
 data Tag = Open | Close | Body
@@ -137,10 +134,10 @@ groupBy p (x : y : xs)
 groupBy _ [x] = [[x]]
 groupBy _ []  = []
 
-buildForest :: Forest t t -> [(t, Tag)]
+buildForest :: Tr.NeForest t t -> [(t, Tag)]
 buildForest = concat . map buildTree
 
-buildTree :: Tree t t -> [(t, Tag)]
+buildTree :: Tr.NeTree t t -> [(t, Tag)]
 buildTree (Tr.Node (Left x) ts) = (x, Open) : buildForest ts ++ [(x, Close)]
 buildTree (Tr.Node (Right x) _) = [(x, Body)]
 
@@ -159,9 +156,9 @@ buildTag (x, tag) = case tag of
     y = L.fromText (escape x)
 
 -- | Show the forest.
-showForest :: Forest T.Text T.Text -> L.Text
+showForest :: Tr.NeForest T.Text T.Text -> L.Text
 showForest = L.toLazyText . buildStream . buildForest
 
 -- | Show the enamex file.
-showEnamex :: [Forest T.Text T.Text] -> L.Text
+showEnamex :: [Tr.NeForest T.Text T.Text] -> L.Text
 showEnamex = L.toLazyText . mconcat . map (L.fromLazyText . showForest)

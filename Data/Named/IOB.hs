@@ -3,8 +3,7 @@
 
     Example:
 
->>> :m Data.Tree Data.Text.Lazy Text.Named.Enamex
->>> :m + Data.Named.IOB Data.Named.Tree
+>>> :m Data.Named.IOB Data.Named.Tree Text.Named.Enamex Data.Text.Lazy
 >>> let enamex = pack "<x>w1.1\\ w1.2</x> w2 <y><z>w3</z> w4</y>"
 
 >>> putStr . drawForest . mapForest show . parseForest $ enamex
@@ -39,7 +38,7 @@ module Data.Named.IOB
 
 import Control.Applicative ((<$>))
 import Data.Maybe (fromJust)
-import Data.Tree
+import Data.Named.Tree hiding (span)
 
 -- | An 'IOB' data structure consists of a word with a corresponding
 -- compound label.
@@ -85,12 +84,12 @@ isI (I _) = True
 isI _     = False
 
 -- | Encode the forest with the IOB method.
-encodeForest :: Forest (Either a w) -> [IOB w a]
+encodeForest :: NeForest a w -> [IOB w a]
 encodeForest [] = []
 encodeForest (x:xs) = encodeTree x ++ encodeForest xs
 
 -- | Encode the tree using the IOB method.
-encodeTree :: Tree (Either a w) -> [IOB w a]
+encodeTree :: NeTree a w -> [IOB w a]
 
 encodeTree (Node (Left _) []) =
     error "encodeTree: label node with no children"
@@ -104,7 +103,7 @@ encodeTree (Node (Right _) (_:_)) =
 encodeTree (Node (Right w) _) = [IOB w []]
 
 -- | Decode the forest using the IOB method.
-decodeForest :: Eq a => [IOB w a] -> Forest (Either a w)
+decodeForest :: Eq a => [IOB w a] -> NeForest a w
 decodeForest [] = []
 decodeForest xs =
     tree : decodeForest xs'
