@@ -9,62 +9,64 @@
 
     Example:
 
->>> :m Data.Tree Data.Text Text.Named.Enamex
->>> let drawIt = putStr . drawForest . fmap (fmap unpack) . parseForest
+>>> :m Text.Named.Enamex Data.Text.Lazy Data.Tree Data.Named.Tree
+>>> let drawIt = putStr . drawForest . mapForest show . parseForest
 >>> drawIt $ pack "<x>w1.1\\ w1.2</x> <y><z>w2</z> w3</y>"
-x
+Left "x"
 |
-`- w1.1 w1.2
+`- Right "w1.1 w1.2"
 ,
-y
+Left "y"
 |
-+- z
++- Left "z"
 |  |
-|  `- w2
+|  `- Right "w2"
 |
-`- w3
+`- Right "w3"
 -}
 
 module Text.Named.Enamex
-( parseForest
+(
+-- * Parsing
+  parseForest
 , parseEnamex
-, mapTwo
+
+-- * Printing
+, showForest
+, showEnamex
 ) where
 
 import Control.Applicative
-import Control.Monad
-import Data.Attoparsec.Text
+import Control.Monad ((<=<), when)
+import Data.Monoid
+import Data.Attoparsec.Text.Lazy
+import Data.List (intersperse)
+import Data.Function (on)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as L
-import qualified Data.Tree as Tree
+import qualified Data.Text.Lazy.Builder as L
+import qualified Data.Tree as Tr
 
+type Tree a b   = Tr.Tree (Either a b)
+type Forest a b = Tr.Forest (Either a b)
 
-type Tree = Tree.Tree T.Text
-type Forest = Tree.Forest T.Text
-
--- | Map the first function over internal nodes
--- and the second one over leaves.
-mapTwo :: (a -> b) -> (a -> c) -> Tree.Tree a -> Tree.Tree (Either b c)
-mapTwo _ g (Tree.Node x [])   = Tree.Node (Right $ g x) []
-mapTwo f g (Tree.Node x kids) = Tree.Node (Left $ f x) (map (mapTwo f g) kids)
-
-pForest :: Parser Forest
+pForest :: Parser (Forest T.Text T.Text)
 pForest = pTree `sepBy` (space *> skipSpace)
 
-pTree :: Parser Tree
+pTree :: Parser (Tree T.Text T.Text)
 pTree = pNode
     <|> pLeaf
 
-pLeaf :: Parser Tree
-pLeaf = Tree.Node <$> pWord <*> pure []
+pLeaf :: Parser (Tree T.Text T.Text)
+pLeaf = Tr.Node <$> (Right <$> pWord) <*> pure []
 
-pNode :: Parser Tree
+pNode :: Parser (Tree T.Text T.Text)
 pNode = do
     x    <- pOpenTag
     kids <- pForest
     x'   <- pCloseTag
     when (x /= x') (fail "Tag start/end mismatch")
-    return $ Tree.Node x kids
+    return $ Tr.Node (Left x) kids
 
 pOpenTag :: Parser T.Text
 pOpenTag = "<" .*> pWord <*. ">"
@@ -93,10 +95,73 @@ unEscape xs = x `T.append` case drop1 rest of
     drop1 = T.uncons <=< return . snd <=< T.uncons
     (x, rest) = T.breakOn "\\" xs 
 
+-- | TODO: Use lazy text builder to avoid slowness in the pessimistic case.
+escape :: T.Text -> T.Text
+escape x = case T.uncons z of
+    Nothing     -> y
+    Just (c, q) -> y
+        `T.append` ('\\'
+        `T.cons` (c
+        `T.cons` escape q))
+  where
+    (y, z) = T.break special x
+    special c = c == ' ' || c == '<' || c == '>' || c == '\\'
+
 -- | Parse the enamex forest.
-parseForest :: T.Text -> Forest
-parseForest = either error id . parseOnly (pForest <* endOfInput)
+parseForest :: L.Text -> Forest T.Text T.Text
+parseForest = either error id . eitherResult . parse (pForest <* endOfInput)
 
 -- | Parse the enamex file.
-parseEnamex :: L.Text -> [Forest]
-parseEnamex = map (parseForest . L.toStrict) . L.lines
+parseEnamex :: L.Text -> [Forest T.Text T.Text]
+parseEnamex = map parseForest . L.lines
+
+data Tag = Open | Close | Body
+
+-- | Function which determines between which two tag elements a space
+-- character should be inserted.
+noSpace :: Tag -> Tag -> Bool
+noSpace Open  _     = True
+noSpace Body  Close = True
+noSpace Close Close = True
+noSpace _     _     = False
+
+-- | We define our own groupBy because the standard version from Data.List
+-- assumes that the equality function is transitive. 
+groupBy :: (a -> a -> Bool) -> [a] -> [[a]]
+groupBy p (x : y : xs)
+    | p x y     = join x $ groupBy p (y : xs)
+    | otherwise = [x]    : groupBy p (y : xs)
+  where
+    join z (zs : zss) = (z : zs) : zss
+    join z [] = [[z]]
+groupBy _ [x] = [[x]]
+groupBy _ []  = []
+
+buildForest :: Forest t t -> [(t, Tag)]
+buildForest = concat . map buildTree
+
+buildTree :: Tree t t -> [(t, Tag)]
+buildTree (Tr.Node (Left x) ts) = (x, Open) : buildForest ts ++ [(x, Close)]
+buildTree (Tr.Node (Right x) _) = [(x, Body)]
+
+buildStream :: [(T.Text, Tag)] -> L.Builder
+buildStream
+    = mconcat . intersperse " "
+    . map (mconcat . map buildTag)
+    . groupBy (noSpace `on` snd)
+
+buildTag :: (T.Text, Tag) -> L.Builder
+buildTag (x, tag) = case tag of
+    Open    -> "<"  `mappend` y `mappend` ">"
+    Close   -> "</" `mappend` y `mappend` ">"
+    _       -> y
+  where
+    y = L.fromText (escape x)
+
+-- | Show the forest.
+showForest :: Forest T.Text T.Text -> L.Text
+showForest = L.toLazyText . buildStream . buildForest
+
+-- | Show the enamex file.
+showEnamex :: [Forest T.Text T.Text] -> L.Text
+showEnamex = L.toLazyText . mconcat . map (L.fromLazyText . showForest)
