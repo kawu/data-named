@@ -126,7 +126,7 @@ noSpace Close Close = True
 noSpace _     _     = False
 
 -- | We define our own groupBy because the standard version from Data.List
--- assumes that the equality function is transitive. 
+-- assumes that the predicate is transitive.
 groupBy :: (a -> a -> Bool) -> [a] -> [[a]]
 groupBy p (x : y : xs)
     | p x y     = join x $ groupBy p (y : xs)
