@@ -3,11 +3,11 @@
 
     Example:
 
->>> :m Data.Tree Data.Text Text.Named.Enamex Data.Named.IOB
+>>> :m Data.Tree Data.Text.Lazy Text.Named.Enamex
+>>> :m + Data.Named.IOB Data.Named.Tree
 >>> let enamex = pack "<x>w1.1\\ w1.2</x> w2 <y><z>w3</z> w4</y>"
->>> let parseIt = fmap (mapTwo id id . fmap unpack) . parseForest
 
->>> putStr . drawForest . fmap (fmap show) . parseIt $ enamex
+>>> putStr . drawForest . mapForest show . parseForest $ enamex
 Left "x"
 |
 `- Right "w1.1 w1.2"
@@ -22,7 +22,7 @@ Left "y"
 |
 `- Right "w4"
 
->>> mapM_ print . encodeForest . parseIt $ enamex
+>>> mapM_ print . encodeForest . parseForest $ enamex
 IOB {word = "w1.1 w1.2", label = [B "x"]}
 IOB {word = "w2", label = []}
 IOB {word = "w3", label = [B "y",B "z"]}
