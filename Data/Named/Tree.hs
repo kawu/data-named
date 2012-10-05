@@ -2,9 +2,6 @@
 
 module Data.Named.Tree
 ( 
--- -- * Combine with words
---   addWords
-
 -- * Span
   Span (..)
 , leafSpan
@@ -21,9 +18,12 @@ module Data.Named.Tree
 , sortForest
 
 -- * Utilities
-, mapLeaves
-, mapNodes
-, mapTrees
+, mapForest
+, mapTree
+, onLeaf
+, onNode
+, onEither
+, onBoth
 ) where
 
 import Prelude hiding (span)
@@ -33,19 +33,40 @@ import Data.Ix (Ix, range)
 import qualified Data.Tree as T
 import qualified Data.Set as S
 
--- | Map function over tree leaves.
-mapLeaves :: (a -> b) -> T.Tree (Either c a) -> T.Tree (Either c b)
-mapLeaves f (T.Node (Left x) ts) = T.Node (Left x) (map (mapLeaves f) ts)
-mapLeaves f (T.Node (Right x) _) = T.Node (Right $ f x) []
+-- | Map function over the leaf value.
+onLeaf :: (a -> b) -> Either c a -> Either c b
+onLeaf _ (Left x)  = Left x
+onLeaf f (Right x) = Right (f x)
+{-# INLINE onLeaf #-}
 
--- | Map function over tree internal nodes.
-mapNodes :: (a -> b) -> T.Tree (Either a c) -> T.Tree (Either b c)
-mapNodes f (T.Node (Left x) ts) = T.Node (Left $ f x) (map (mapNodes f) ts)
-mapNodes _ (T.Node (Right x) _) = T.Node (Right x) []
+-- | Map function over the internal node value.
+onNode :: (a -> b) -> Either a c -> Either b c
+onNode f (Left x)  = Left (f x)
+onNode _ (Right x) = Right x
+{-# INLINE onNode #-}
+
+-- | Map the first function over internal node value
+-- and the second one over leaf value.
+onEither :: (a -> c) -> (b -> d) -> Either a b -> Either c d
+onEither f _ (Left x)  = Left (f x)
+onEither _ g (Right x) = Right (g x)
+{-# INLINE onEither #-}
+
+-- | Map one function over both node and leaf values.
+onBoth :: (a -> b) -> Either a a -> Either b b
+onBoth f (Left x)  = Left (f x)
+onBoth f (Right x) = Right (f x)
+{-# INLINE onBoth #-}
 
 -- | Map function over each tree from the forest.
-mapTrees :: (a -> b) -> T.Forest a -> T.Forest b
-mapTrees f = map (fmap f)
+mapForest :: (a -> b) -> T.Forest a -> T.Forest b
+mapForest = map . mapTree
+{-# INLINE mapForest #-}
+
+-- | Map function over the tree.
+mapTree :: (a -> b) -> T.Tree a -> T.Tree b
+mapTree = fmap
+{-# INLINE mapTree #-}
 
 -- | Spanning of a tree.
 data Span w = Span
