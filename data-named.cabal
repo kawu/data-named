@@ -1,5 +1,5 @@
 name:               data-named
-version:            0.4.0
+version:            0.5.0
 synopsis:           Data types for named entities
 description:
     The library provides data types which can be used to represent
@@ -32,6 +32,7 @@ library
       , containers
       , text
       , attoparsec
+      , binary
 
     exposed-modules:
         Data.Named.Tree

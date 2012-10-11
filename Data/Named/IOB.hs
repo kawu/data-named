@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveFunctor #-}
+
 {- |
     IOB encoding method extended to forests.
 
@@ -38,6 +40,7 @@ module Data.Named.IOB
 
 import Control.Applicative ((<$>))
 import Data.Maybe (fromJust)
+import Data.Binary (Binary, get, put)
 import Data.Named.Tree hiding (span)
 
 -- | An 'IOB' data structure consists of a word with a corresponding
@@ -53,7 +56,15 @@ type Label a = [Atom a]
 -- | An 'Atom' is the atomic label with additional marker.
 data Atom a  = B a      -- ^ Beginning marker
              | I a      -- ^ Inside marker 
-             deriving (Show, Eq, Ord)
+             deriving (Show, Eq, Ord, Functor)
+
+instance Binary a => Binary (Atom a) where
+    put (B x) = put '1' >> put x
+    put (I x) = put '2' >> put x
+    get = get >>= \i -> case i of
+        '1' -> B <$> get
+        '2' -> I <$> get
+        _   -> error "Atom Binary instance: invalid code"
 
 push :: Atom a -> IOB w a -> IOB w a
 push x (IOB w xs) = IOB w (x:xs)
