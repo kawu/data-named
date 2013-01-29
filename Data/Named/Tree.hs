@@ -28,12 +28,15 @@ module Data.Named.Tree
 , onNode
 , onEither
 , onBoth
+, groupForestLeaves
+, groupTreeLeaves
 
 , module Data.Tree
 ) where
 
 import Prelude hiding (span)
-import Data.List (sortBy)
+import Data.List (sortBy, groupBy)
+import Data.Either (rights)
 import Data.Ord (comparing)
 import Data.Ix (Ix, range)
 import Data.Tree
@@ -79,6 +82,25 @@ mapForest = map . mapTree
 mapTree :: (a -> b) -> Tree a -> Tree b
 mapTree = fmap
 {-# INLINE mapTree #-}
+
+-- | Group leaves with respect to the given equality function.
+groupForestLeaves :: (b -> b -> Bool) -> NeForest a b -> NeForest a [b]
+groupForestLeaves f
+    = concatMap joinLeaves
+    . groupBy (both isLeaf)
+    . map (groupTreeLeaves f)
+  where
+    joinLeaves [x]  = [x]
+    joinLeaves xs =
+        let ys = (concat . rights) (map rootLabel xs)
+        in  [Node (Right ys') [] | ys' <- groupBy f ys]
+    both g x y                  = g x && g y
+    isLeaf (Node (Right _) [])  = True
+    isLeaf _                    = False
+
+-- | Group leaves with respect to the given equality function.
+groupTreeLeaves :: (b -> b -> Bool) -> NeTree a b -> NeTree a [b]
+groupTreeLeaves f (Node v xs) = Node (fmap (:[]) v) (groupForestLeaves f xs)
 
 -- | Spanning of a tree.
 data Span w = Span

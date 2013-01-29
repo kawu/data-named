@@ -1,5 +1,5 @@
 name:               data-named
-version:            0.5.0
+version:            0.5.1
 synopsis:           Data types for named entities
 description:
     The library provides data types which can be used to represent
