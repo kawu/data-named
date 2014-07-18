@@ -75,8 +75,10 @@ addWords (p, q) ts
         let m = spanSet s S.\\ S.unions (map (spanSet . span) us)
         in  Node (k, s) (fillForest us ++ map mkLeaf (S.toList m))
 
--- | Transform graph into a disjoint forest, i.e. with no mutually
--- overlapping trees.
+-- | Transform a graph into a disjoint forest, i.e. a forest with
+-- no mutually overlapping trees.
+-- The process is lossy, discontinuity and overlapping cannot
+-- be represented with the `NeForest` data type.
 toForest :: (Ord n, Ix w) => Graph n w -> NeForest n w
 toForest g = addWords (bounds g) . prune . map (generate g . Left) . roots $ g
 
