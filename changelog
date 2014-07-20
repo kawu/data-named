@@ -1,0 +1,4 @@
+-*-change-log-*-
+
+0.6.0	Jul 2014
+	* Add `concatForestLeaves` function (inverse of `groupForestLeaves`)

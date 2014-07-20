@@ -30,6 +30,8 @@ module Data.Named.Tree
 , onBoth
 , groupForestLeaves
 , groupTreeLeaves
+, concatForestLeaves
+, concatTreeLeaves
 
 , module Data.Tree
 ) where
@@ -101,6 +103,15 @@ groupForestLeaves f
 -- | Group leaves with respect to the given equality function.
 groupTreeLeaves :: (b -> b -> Bool) -> NeTree a b -> NeTree a [b]
 groupTreeLeaves f (Node v xs) = Node (fmap (:[]) v) (groupForestLeaves f xs)
+
+-- | Group leaves with respect to the given equality function.
+concatForestLeaves ::  NeForest a [b] -> NeForest a b
+concatForestLeaves = concatMap concatTreeLeaves
+
+-- | Group leaves with respect to the given equality function.
+concatTreeLeaves :: NeTree a [b] -> NeForest a b
+concatTreeLeaves (Node (Left x) xs)  = [Node (Left x) (concatForestLeaves xs)]
+concatTreeLeaves (Node (Right xs) _) = [Node (Right x) [] | x <- xs]
 
 -- | Spanning of a tree.
 data Span w = Span
