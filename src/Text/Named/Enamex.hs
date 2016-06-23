@@ -36,16 +36,16 @@ module Text.Named.Enamex
 , showEnamex
 ) where
 
-import Control.Applicative
-import Control.Monad ((<=<), when)
-import Data.Monoid
-import Data.Attoparsec.Text.Lazy
-import Data.List (intersperse)
-import Data.Function (on)
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as L
-import qualified Data.Text.Lazy.Builder as L
-import qualified Data.Named.Tree as Tr
+import           Control.Applicative
+import           Control.Monad             (when, (<=<))
+-- import Data.Monoid
+import           Data.Attoparsec.Text.Lazy
+import           Data.Function             (on)
+import           Data.List                 (intersperse)
+import qualified Data.Named.Tree           as Tr
+import qualified Data.Text                 as T
+import qualified Data.Text.Lazy            as L
+import qualified Data.Text.Lazy.Builder    as L
 
 pForest :: Parser (Tr.NeForest T.Text T.Text)
 pForest = pTree `sepBy` (space *> skipSpace)
@@ -66,10 +66,10 @@ pNode = do
     return $ Tr.Node (Left x) kids
 
 pOpenTag :: Parser T.Text
-pOpenTag = "<" .*> pWord <*. ">"
+pOpenTag = "<" *> pWord <* ">"
 
 pCloseTag :: Parser T.Text
-pCloseTag = "</" .*> pWord <*. ">"
+pCloseTag = "</" *> pWord <* ">"
 
 pWord :: Parser T.Text
 pWord =
@@ -90,7 +90,7 @@ unEscape xs = x `T.append` case drop1 rest of
     Nothing      -> ""
   where
     drop1 = T.uncons <=< return . snd <=< T.uncons
-    (x, rest) = T.breakOn "\\" xs 
+    (x, rest) = T.breakOn "\\" xs
 
 -- | TODO: Use lazy text builder to avoid slowness in the pessimistic case.
 escape :: T.Text -> T.Text

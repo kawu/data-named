@@ -1,4 +1,8 @@
 -*-change-log-*-
 
+0.6.1	Jun 2016
+        * Add stack.yaml
+        * Add `Applicative` instances where needed (as a result of the `Applicative => Monad` proposal)
+
 0.6.0	Jul 2014
 	* Add `concatForestLeaves` function (inverse of `groupForestLeaves`)

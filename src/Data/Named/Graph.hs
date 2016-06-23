@@ -1,4 +1,6 @@
-{-# LANGUAGE DoAndIfThenElse #-}
+{-# LANGUAGE DoAndIfThenElse    #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 -- | Implementation of a graph with each internal node identified by a
 -- unique key and each leaf represented by a position in the sentence.
@@ -11,13 +13,13 @@ module Data.Named.Graph
 , toForest
 ) where
 
-import Prelude hiding (span)
-import Data.Either (lefts, rights)
-import Data.Ix (Ix, range, inRange)
-import qualified Data.Set as S
-import qualified Data.Map as M
+import           Data.Either     (lefts, rights)
+import           Data.Ix         (Ix, inRange, range)
+import qualified Data.Map        as M
+import qualified Data.Set        as S
+import           Prelude         hiding (span)
 
-import Data.Named.Tree
+import           Data.Named.Tree
 
 -- | A graph over a sentence.
 data Graph n w = Graph
@@ -84,6 +86,15 @@ toForest g = addWords (bounds g) . prune . map (generate g . Left) . roots $ g
 
 -- | A stateful monad for forest pruning.
 newtype RanM w a = RanM { runRanM :: Maybe w -> (a, Maybe w) }
+
+deriving instance Functor (RanM w)
+
+instance Applicative (RanM w) where
+  pure x = RanM $ \s -> (x, s)
+  RanM v <*> RanM w = RanM $
+    \s -> case v s of
+      (f, s') -> case w s' of
+        (x, s'') -> (f x, s'')
 
 instance Monad (RanM w) where
     return x     = RanM $ \s -> (x, s)
