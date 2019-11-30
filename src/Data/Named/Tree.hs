@@ -36,7 +36,7 @@ module Data.Named.Tree
 , module Data.Tree
 ) where
 
-import Prelude hiding (span)
+import Prelude hiding (span, (<>))
 import Data.List (sortBy, groupBy)
 import Data.Either (rights)
 import Data.Ord (comparing)
